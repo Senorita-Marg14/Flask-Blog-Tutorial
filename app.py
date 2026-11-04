@@ -23,11 +23,40 @@ def get_db_connection():
 # use the app.route() decorator to create a Flask view function called index()
 @app.route('/')
 def index():
-    
-    return "<h1>Welcome to My Blog</h1>"
+    #get a connection to the database
+    conn = get_db_connection()
+    #execute a query to read all posts from the posts table in the database
+    posts = conn.execute('SELECT * FROM posts').fetchall()
+    #close the connection 
+    conn.close()
+    #send the posts to the index.html template to be displayed 
+    return render_template('index.html', posts=posts)
 
 
 # route to create a post
+@app.route('/create/', methods=('GET', 'POST'))
+def create():
+    #determine whether the page is being requested with a get or a post request
+    if request.method == 'POST':
+        #get the title and content that was submitted 
+        title = request.form['title']
+        content = request.form['content']
+        #display the error message if title or content was not submitted
+        #else make a db connection and insert the blog post content
+        if not title:
+            flash("Title is required")
+        if not content: 
+            flash("Content is required")
+        else: 
+            conn = get_db_connection()
+            #insert the data into the db
+            conn.execute('INSERT INTO posts (title, content) VALUES (?, ?)', (title, content))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('index'))
 
+    return render_template('create.html')
 
-app.run()
+    
+
+app.run(port=5008)
