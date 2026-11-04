@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, url_for, flash, redirect, abo
 # make a Flask application object called app
 app = Flask(__name__)
 app.config["DEBUG"] = True
+app.config['SECRET_KEY'] = 'your secret key'
 
 
 
@@ -18,6 +19,16 @@ def get_db_connection():
 
     #return the connection object
     return conn
+
+#create a funtion to retrieve a post from the database
+def get_post(post_id):
+    conn = get_db_connection()
+    post = conn.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+
+    if post is None:
+        abort(404)
+
+    return post 
 
 
 # use the app.route() decorator to create a Flask view function called index()
@@ -56,6 +67,41 @@ def create():
             return redirect(url_for('index'))
 
     return render_template('create.html')
+
+#create a route to edit a post. Load page with the get or the post methid 
+#pass the post id as a URL parameter
+@app.route('/<int:id>/edit/', methods=['GET', 'POST'])
+def edit(id):
+    #get the post from the database with a select query of the post with that id
+    post = get_post(id)
+
+    #determine if the page was requested with a get or post method
+    if request.method == 'POST': 
+        #get the title and contet 
+        title = request.form['title']
+        content = request.form['content']
+
+        if not title: 
+            flash('Title is required')
+        elif not content: 
+            flash('Content is required')
+        else:
+            conn = get_db_connection()
+
+            conn.execute('UPDATE posts set title = ?, content = ? WHERE id = ?', (title, content, id))
+            conn.commit()
+            conn.close()
+
+            #redirect to the home page
+            return redirect(url_for('index'))
+        #IF POST, process the form data. Get the data and validate it. Update the post and redirect the homepage
+
+
+    #if GET then display page 
+    return render_template('edit.html', post=post)
+
+
+
 
     
 
